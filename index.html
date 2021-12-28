@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ThreeJS</title>
+  <style>
+    body {
+      /* set margin to 0 and overflow to hidden, to go fullscreen */
+      margin: 0;
+      overflow: hidden;
+      /* background-color: #EEEEEE; */
+      position: relative;
+    }
+    #operateWrapper {
+      position: absolute;
+      left: 0;
+      top: 0;
+      margin: 5px;
+      padding: 10px;
+      width: 15%;
+      text-align: left;
+      background-color: gray;
+    }
+    #operateWrapper > div {
+      margin: 5px 0;
+    }
+    h4 {
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    button {
+      margin: 5px 0;
+    }
+
+    #geoSetMoreWrapper {
+      width: 100%;
+      display: none;
+      border-top: 1px solid black;
+    }
+  </style>
+</head>
+<body>
+      <div id="Stats-output"></div>
+      <div id="WebGL-output"></div>
+
+      <div id="operateWrapper">
+        <h4>功能区</h4>
+        <div id="ex&imOperate">
+          <button>导入</button>
+          <button>导出</button>
+        </div>
+        <div id="addOperate">
+          <h4>新增几何体</h4>
+          <button id="addPlane">平面</button>
+          <button id="addBox">长方体</button>
+          <button id="addSphere">圆球</button>
+          <button id="addCylinder">圆柱</button>
+          <button id="addCone">圆锥</button>
+          <button id="addTetrahedron">三棱锥</button>
+        </div>
+
+        <div id="geoSetMoreWrapper">
+          <h4>基础设置</h4>
+          <div id="allHave">
+            <div>
+              位移&nbsp;
+              x:<input type='text' name='positionX' value='' style="display: inline; width:20px;"/>&nbsp;
+              y:<input type='text' name='positionY' value='' style="display: inline; width:20px;"/>&nbsp;
+              z:<input type='text' name='positionZ' value='' style="display: inline; width:20px;"/>
+            </div>
+            <div>
+              旋转&nbsp;
+              x:<input type='text' name='rotateX' value='' style="display: inline; width:20px;"/>&nbsp;
+              y:<input type='text' name='rotateY' value='' style="display: inline; width:20px;"/>&nbsp;
+              z:<input type='text' name='rotateZ' value='' style="display: inline; width:20px;"/>
+            </div>
+            <div>
+              缩放&nbsp;
+              x:<input type='text' name='scaleX' value='' style="display: inline; width:20px;"/>&nbsp;
+              y:<input type='text' name='scaleY' value='' style="display: inline; width:20px;"/>&nbsp;
+              z:<input type='text' name='scaleZ' value='' style="display: inline; width:20px;"/>
+            </div>
+            <div>
+              透明度:
+              <input type='text' name='opacity' value='' style="display: inline; width:20px;"/>&nbsp;
+              颜色:
+              <input type='text' name='color' value='' style="display: inline; width:60px;"/>
+            </div>
+            <div id="differInput">
+            </div>
+            <div>
+              <button id="okBtn">确定</button>
+              <button id="clearBtn">清空</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+</body>
+    <script type="text/javascript" src='./libs//three.js'></script>
+    <script type="text/javascript" src="./libs//stats.js"></script>
+    <script type="text/javascript" src="./libs//dat.gui.js"></script>
+    <script type="text/javascript" src="./libs/OrbitControls.js"></script>
+    <script type="text/javascript" src="./libs/DragControls.js"></script>
+    <script type="text/javascript" src="./libs/TransformControls.js"></script>
+    <script type="text/javascript" src="./src/index.js"></script>
+</html>
