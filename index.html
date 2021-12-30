@@ -47,9 +47,16 @@
       <div id="operateWrapper">
         <h4>功能区</h4>
         <div id="ex&imOperate">
-          <button>导入</button>
-          <button>导出</button>
+
+          <form>
+              <label for="avatar">导入模型:</label>
+              <input type="file" id="modelFiles" name="file" multiple />
+                <!-- accept="image/png,image/gif,image/jpeg" -->
+              
+          </form >
+          
         </div>
+        
         <div id="addOperate">
           <h4>新增几何体</h4>
           <button id="addPlane">平面</button>
@@ -104,5 +111,10 @@
     <script type="text/javascript" src="./libs/OrbitControls.js"></script>
     <script type="text/javascript" src="./libs/DragControls.js"></script>
     <script type="text/javascript" src="./libs/TransformControls.js"></script>
+    
+    <script type="text/javascript" src="./src/utils/utils.js"></script>
     <script type="text/javascript" src="./src/index.js"></script>
+
+    <!-- <script type="text/javascript" src="./libs/TrackballControls.js"></script> -->
+    <!-- <script type="text/javascript" src="./src/test.js"></script> -->
 </html>

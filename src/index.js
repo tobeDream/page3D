@@ -4,8 +4,9 @@ let gui, orbitControls, dragControls, transformControls
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 let operateType = "", operateGeo = "";
-let objects = [], curObj, curGeoType
+let objects = [], curObj, curParameters, curGeoType
 let geoSetMoreWrapper = null, differInputDom = null
+let crash = false;
 
 function init() {
     scene = new THREE.Scene();
@@ -22,6 +23,7 @@ function init() {
     // 轨道控制器 拖拽控制器
     initOrbitControl();
     initDragTransformControl();
+    initLight()
 
     addMouseEvents();
     addOperateEvents();
@@ -29,9 +31,8 @@ function init() {
     // 添加坐标系
     var axes = new THREE.AxisHelper(1000);//参数设置了三条轴线的长度
     scene.add(axes);
-    
+
     stats = initStats();
-    gui = new dat.GUI();
     
     
     render()
@@ -48,6 +49,7 @@ function render () {
     requestAnimationFrame(render);
     renderer.render(scene, camera);
 }
+// 初始化工作
 function initStats () {
     let stats = new Stats();
     stats.setMode(0);
@@ -88,7 +90,7 @@ function setDragControl() {
     //物体拖拽完毕，将轨迹控制器开启
     dragControls.addEventListener('dragend',(event)=>{
         orbitControls.enabled = true;
-        transformControls.detach(event.object);
+        transformControls.detach();
     })
 
     dragControls.addEventListener('drag', function( event ){ //选中模型
@@ -98,7 +100,24 @@ function setDragControl() {
         transformControls.setSize(0.4);
     });
 }
-
+//创建光源
+function initLight(){
+    // 方向光
+    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+    directionalLight.shadow.camera.near = 20; //产生阴影的最近距离
+    directionalLight.shadow.camera.far = 200; //产生阴影的最远距离
+    directionalLight.shadow.camera.left = -50; //产生阴影距离位置的最左边位置
+    directionalLight.shadow.camera.right = 50; //最右边
+    directionalLight.shadow.camera.top = 50; //最上边
+    directionalLight.shadow.camera.bottom = -50; //最下面
+    //这两个值决定使用多少像素生成阴影 默认512
+    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.shadow.mapSize.width = 1024;
+    scene.add( directionalLight );
+    // 环境光
+    scene.add( new THREE.AmbientLight( 0x505050 ) );
+   }
+// 事件监听
 function addMouseEvents () {
     document.addEventListener('keydown', onKeyUp, false)
     renderer.domElement.addEventListener('mousedown', onMouseDown, false)
@@ -119,20 +138,30 @@ function onMouseDown(event){
      if(intersects.length>0){
         // 获取面上的对象
         curObj = intersects[0].object;
+
         console.log(curObj, '-----------打印curObj');
+        // 每个GUI 都是重建的
+        if (gui != undefined) {
+            gui.destroy()
+            gui = undefined
+        }
+        setCurObjGUI();
      } else {
-         if (geoSetMoreWrapper != null) {
+        if (gui != undefined) {
+            gui.destroy()
+            gui = undefined
+        }
+        if (geoSetMoreWrapper != null) {
             geoSetMoreWrapper.style.display = 'none';
-         }
+        }
      }
 }
 function onKeyUp (event) {
     switch(event.keyCode) {
-        case 46:
+        case 46: // delete
             deleteObject();
             break;
         case 83: // S
-            showObjSetDiv();
             break;
         case 84: // T
             transformControls.setMode('translate')
@@ -145,84 +174,115 @@ function onKeyUp (event) {
             break;
     }
 }
-
-function showObjSetDiv() {
-    geoSetMoreWrapper = document.getElementById('geoSetMoreWrapper')
-    differInputDom = document.getElementById('differInput')
-    curGeoType = curObj.geometry.type
-
-    let innerHtml = "<h4>详细设置</h4>"
-    switch(curGeoType) {
-        case "PlaneGeometry":
-            innerHtml += "X轴上的宽度：<input type='text' name='width' value='' style='display: inline; width:20px;'/><br />"
-            innerHtml += "Y轴上的高度：<input type='text' name='height' value='' style='display: inline; width:20px;'/><br />"
-            innerHtml += "Z轴上的深度：<input type='text' name='depth' value='' style='display: inline; width:20px;'/>"
-            break;
-        case "SphereGeometry":
-            innerHtml += "半径：<input type='text' name='radius' value='' style='display: inline; width:20px;'/>"
-            break;
-        case "CylinderGeometry":
-            innerHtml += "顶部半径：<input type='text' name='radiusTop' value='' style='display: inline; width:20px;'/><br />"
-            innerHtml += "底部半径：<input type='text' name='radiusBottom' value='' style='display: inline; width:20px;'/><br />"
-            innerHtml += "圆柱高度：<input type='text' name='height' value='' style='display: inline; width:20px;'/>"
-            break;
-        case "ConeGeometry":
-            innerHtml += "底部半径：<input type='text' name='radius' value='' style='display: inline; width:20px;'/><br />"
-            innerHtml += "圆锥高度：<input type='text' name='height' value='' style='display: inline; width:20px;'/>"
-            break;
-        case "TetrahedronGeometry":
-            innerHtml += "半径：<input type='text' name='radius' value='' style='display: inline; width:20px;'/>"
-            break;
-        case "PlaneGeometry":
-            innerHtml += "X轴上的宽度：<input type='text' name='width' value='' style='display: inline; width:20px;'/><br />"
-            innerHtml += "Y轴上的高度：<input type='text' name='height' value='' style='display: inline; width:20px;'/>"
-            break;
+// 碰撞监测
+function collision(collisionArray, Movingcube){
+    if (Movingcube == undefined) {
+        return null
     }
-    // differInputDom.innerHTML = innerHtml
-    geoSetMoreWrapper.style.display = 'block';
-}
-function clearInput () {
-    let inputDoms = document.getElementsByTagName('input')
-    for(let i = 0; i < inputDoms.length; i++) {
-       inputDoms[i].value = '';
+
+    //获取到底部cube的中心点坐标
+    var originPoint = Movingcube.position.clone();
+
+    for(var vertexIndex = 0; vertexIndex < Movingcube.geometry.vertices.length; vertexIndex++){
+        //顶点原始坐标
+        var localVertex = Movingcube.geometry.vertices[vertexIndex].clone();
+        //顶点经过变换后的坐标
+        var globaVertex = localVertex.applyMatrix4(Movingcube.matrix);
+        //获得由中心指向顶点的向量
+        var directionVector = globaVertex.sub(Movingcube.position);
+
+        //将方向向量初始化
+        var ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
+        //检测射线与多个物体相交的情况
+        var collisionResults = ray.intersectObjects(collisionArray, true);
+
+        // //如果返回结果不为空，且交点与射线起点的距离小于物体中心至顶点的距离，则发生碰撞
+        if(collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() + 1.2 ){
+            crash = true;
+            console.log('!!!-----------发生碰撞');
+        }
     }
 }
-function setCurObjMore () {
-    let inputDoms = document.getElementsByTagName('input')
-    let obj = curObj
+// 更新几何体信息
+function setCurObjGUI () {
+    gui = new dat.GUI();
+    
+    curParameters = {
+		positionX: curObj.position.x,
+		positionY: curObj.position.y,
+		positionZ: curObj.position.z,
+        rotationX: curObj.rotation.x,
+		rotationY: curObj.rotation.y,
+		rotationZ: curObj.rotation.z,
+        scaleX: curObj.scale.x,
+		scaleY: curObj.scale.y,
+		scaleZ: curObj.scale.z,
+		color: window.colorHex(curObj.material.color),
+		opacity: curObj.material.opacity, 
+		material: window.getTheMaterialType(curObj.material),
+	};
+    
+    var folder1 = gui.addFolder('Position');
+	var positionX = folder1.add( curParameters, 'positionX' ).min(-200).max(200).step(1).listen();
+	var positionY = folder1.add( curParameters, 'positionY' ).min(-200).max(200).step(1).listen();
+	var positionZ = folder1.add( curParameters, 'positionZ' ).min(-200).max(200).step(1).listen();
+	folder1.open();
 
-    for(let i = 0; i < inputDoms.length; i++) {
-       let val = inputDoms[i].value.trim()
-       if (val.length > 0) {
-            switch(inputDoms[i].name) {
-                case "positionX": obj.position.x = val; break;
-                case "positionY": obj.position.y = val; break;
-                case "positionZ": obj.position.z = val; break;
-                case "rotateX": obj.rotation.x = val; break;
-                case "rotateY": obj.rotation.y = val; break;
-                case "rotateZ": obj.rotation.z = val; break;
-                case "scaleX": obj.scale.x = val; break;
-                case "scaleY": obj.scale.y = val; break;
-                case "scaleZ": obj.scale.z = val; break;
-                case "opacity": 
-                    obj.material.transparent = true;
-                    obj.material.opacity = val;
-                    break;
-                case "color": 
-                    let colorVal = "0x" +val.split('#')[1];
-                    obj.material.color = new THREE.Color(colorVal);
-                    break;
-                case "width": obj.geometry.parameters.width = val; break;
-                case "height": obj.geometry.parameters.height = val; break;
-                case "depth": obj.geometry.parameters.depth = val; break;
-                case "radius": obj.geometry.parameters.radius = val; break;
-                case "radiusTop": obj.geometry.parameters.radiusTop = val; break;
-                case "radiusBottom": obj.geometry.parameters.radiusBottom = val; break;
-            }
-       }
-    }
+    var folder2 = gui.addFolder('Rotation');
+	var rotationX = folder2.add( curParameters, 'rotationX' ).min(0).max(360).step(5).listen();
+	var rotationY = folder2.add( curParameters, 'rotationY' ).min(0).max(360).step(5).listen();
+	var rotationZ = folder2.add( curParameters, 'rotationZ' ).min(0).max(360).step(5).listen();
+	folder2.open();
+
+    var folder3 = gui.addFolder('Scale');
+	var scaleX = folder3.add( curParameters, 'scaleX' ).name('scaleX');
+	var scaleY = folder3.add( curParameters, 'scaleY' ).name('scaleX');
+	var scaleZ = folder3.add( curParameters, 'scaleZ' ).name('scaleX');
+	folder3.open();
+	
+	positionX.onChange(function(value) {   curObj.position.x = value;   });
+	positionY.onChange(function(value) {   curObj.position.y = value;   });
+	positionZ.onChange(function(value) {   curObj.position.z = value;   });
+    rotationX.onChange(function(value) {   curObj.rotation.x = value;   });
+	rotationY.onChange(function(value) {   curObj.rotation.y = value;   });
+	rotationZ.onChange(function(value) {   curObj.rotation.z = value;   });
+    scaleX.onChange(function(value) {   curObj.scale.x = value;   });
+	scaleY.onChange(function(value) {   curObj.scale.y = value;   });
+	scaleZ.onChange(function(value) {   curObj.scale.z = value;   });
+	
+	var curColor = gui.addColor( curParameters, 'color' ).name('Color').listen();
+	curColor.onChange(function(value)  {   curObj.material.color.setHex( value.replace("#", "0x") );   });
+	
+	var curOpacity = gui.add( curParameters, 'opacity' ).min(0).max(1).step(0.01).name('Opacity').listen();
+	curOpacity.onChange(function(value) {   curObj.material.opacity = value;   });
+	
+	var curMaterial = gui.add( curParameters, 'material', [ "Basic", "Lambert", "Phong", "Wireframe" ] ).name('Material Type').listen();
+	curMaterial.onChange(function(value)  {   updateCube();   });
+	
+	gui.open();
 }
+function updateCube(){
+	var value = curParameters.material;
+	var newMaterial;
 
+	if (value == "Basic")
+		newMaterial = new THREE.MeshBasicMaterial( { color: 0x000000 } );
+	else if (value == "Lambert")
+		newMaterial = new THREE.MeshLambertMaterial( { color: 0x000000 } );
+	else if (value == "Phong")
+		newMaterial = new THREE.MeshPhongMaterial( { color: 0x000000 } );
+	else // (value == "Wireframe")
+		newMaterial = new THREE.MeshBasicMaterial( { wireframe: true } );
+    curObj.material = newMaterial;
+
+    curObj.position.x = curParameters.positionX;
+    curObj.position.y = curParameters.positionY;
+    curObj.position.z = curParameters.positionZ;
+    curObj.material.color.setHex( curParameters.color.replace("#", "0x") );
+    curObj.material.opacity = curParameters.opacity;  
+    curObj.material.transparent = true;
+	curObj.visible = true;
+}
 function deleteObject () {
     const draggableObjects = dragControls.getObjects();
     if (draggableObjects.length > 0) {
@@ -243,7 +303,7 @@ function deleteObject () {
         }
     }
 }
-
+// 添加mesh
 function addBox() {
     var geometry = new THREE.BoxGeometry( 2, 2, 2 );
     var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
@@ -344,12 +404,23 @@ function addOperateEvents () {
     document.getElementById('addTetrahedron').addEventListener('click', function () {
         addTetrahedron()
     })
-    document.getElementById('okBtn').addEventListener('click', function () {
-        setCurObjMore()
+
+    document.getElementById('modelFiles').addEventListener('change', function(event) {
+        let files = event.target.files;
+        for(let i = 0; i < files.length; i++) {
+           let file = files[i];
+           let lastDotIndex = file.name.lastIndexOf('.')
+           let fileName = file.name.substring(0, lastDotIndex)
+           let fileType = file.name.substring(lastDotIndex+1)
+           
+        }
+        console.log(event.target.files, '-----------打印event.target.files');
     })
-    document.getElementById('clearBtn').addEventListener('click', function () {
-        clearInput()
-    })
+
+    orbitControls.addEventListener("change", function(){
+        collision(objects, curObj,camera, orbitControls );
+    }, false);
+
 }
 
 
