@@ -1,0 +1,40 @@
+body {
+    /* set margin to 0 and overflow to hidden, to go fullscreen */
+    margin: 0;
+    overflow: hidden;
+    /* background-color: #EEEEEE; */
+    position: relative;
+  }
+  #operateWrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    margin: 5px;
+    padding: 10px;
+    width: 15%;
+    text-align: left;
+    background-color: gray;
+  }
+  #operateWrapper > div {
+    margin: 5px 0;
+  }
+  h4 {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+  }
+  button {
+    margin: 5px 0;
+  }
+
+  #geoSetMoreWrapper {
+    width: 100%;
+    display: none;
+    border-top: 1px solid black;
+  }
+  #message {
+      position: absolute;
+      right: 5px;
+      bottom: 0;
+      color: red;
+  }

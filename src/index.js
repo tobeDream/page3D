@@ -7,6 +7,8 @@ let operateType = "", operateGeo = "";
 let objects = [], curObj, curParameters, curGeoType
 let geoSetMoreWrapper = null, differInputDom = null
 let crash = false;
+let boxHelpers = [], boxWraps = []
+let collidableMeshList = [];
 
 function init() {
     scene = new THREE.Scene();
@@ -98,6 +100,11 @@ function setDragControl() {
         transformControls.attach(event.object);
         // 设置三维坐标轴的大小，这个坐标轴不会随着模型的缩放而缩放
         transformControls.setSize(0.4);
+        // 包围盒随着几何体移动
+        updateMeshWrap();
+        // 碰撞检测
+        collisionRaycasterDetect()
+        collisionWrapBox()
     });
 }
 //创建光源
@@ -172,35 +179,6 @@ function onKeyUp (event) {
         case 83: // S
             transformControls.setMode('scale')
             break;
-    }
-}
-// 碰撞监测
-function collision(collisionArray, Movingcube){
-    if (Movingcube == undefined) {
-        return null
-    }
-
-    //获取到底部cube的中心点坐标
-    var originPoint = Movingcube.position.clone();
-
-    for(var vertexIndex = 0; vertexIndex < Movingcube.geometry.vertices.length; vertexIndex++){
-        //顶点原始坐标
-        var localVertex = Movingcube.geometry.vertices[vertexIndex].clone();
-        //顶点经过变换后的坐标
-        var globaVertex = localVertex.applyMatrix4(Movingcube.matrix);
-        //获得由中心指向顶点的向量
-        var directionVector = globaVertex.sub(Movingcube.position);
-
-        //将方向向量初始化
-        var ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
-        //检测射线与多个物体相交的情况
-        var collisionResults = ray.intersectObjects(collisionArray, true);
-
-        // //如果返回结果不为空，且交点与射线起点的距离小于物体中心至顶点的距离，则发生碰撞
-        if(collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() + 1.2 ){
-            crash = true;
-            console.log('!!!-----------发生碰撞');
-        }
     }
 }
 // 更新几何体信息
@@ -283,21 +261,96 @@ function updateCube(){
     curObj.material.transparent = true;
 	curObj.visible = true;
 }
+
+// 包围盒碰撞监测
+// 通过包围盒监测  仅触发一次
+// 包围盒更加灵敏  两几何体相交时仍能判定
+function collisionWrapBox () {
+    if (curObj == undefined) return null;
+    let crashBox = curObj.boxWrap;
+    for (let i = 1; i < objects.length; i ++) {
+        let oneStone = objects[i];
+        if(oneStone.userData != curObj.userData) {
+            let stoneBox = oneStone.boxWrap;
+            let flag = crashBox.intersectsBox(stoneBox);
+            if(flag) {
+                appendText(" 撞上了2 "); // 撞到了
+            }
+        }
+
+    }
+}
+// 屏幕射线碰撞检测
+// 射线检测  每移动一次就触发一次
+// 射线监测不够灵敏  几何体相交时不能判定
+function collisionRaycasterDetect () {
+    if (curObj == undefined) return null;
+    let MovingCube = curObj;
+    var originPoint = MovingCube.position.clone();
+	clearText();
+    
+    let verticesArr = MovingCube.geometry.attributes.position.array;
+	for (var vertexIndex = 0; vertexIndex < verticesArr.length; vertexIndex = vertexIndex + 3) {
+        // BufferGeometry 的 vertices 需要另外构建		
+        let vt = new THREE.Vector3();
+        vt.x = verticesArr[vertexIndex];
+        vt.y = verticesArr[vertexIndex+1];
+        vt.z = verticesArr[vertexIndex+2];
+
+        var localVertex = vt;
+        // var localVertex = MovingCube.geometry.vertices[vertexIndex].clone();
+		var globalVertex = localVertex.applyMatrix4( MovingCube.matrix );
+		var directionVector = globalVertex.sub( MovingCube.position );
+		
+		var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
+		var collisionResults = ray.intersectObjects( collidableMeshList );
+		if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() )  {
+			// appendText(" 撞上了1 ");
+        }
+	}	
+	orbitControls.update();
+	stats.update();
+}
+function clearText(){   document.getElementById('message').innerHTML = '..........';   }
+function appendText(txt){   document.getElementById('message').innerHTML += txt;   }
+// 包围盒
+function updateMeshWrap () {
+    let boxHelper = curObj.boxHelper
+    let boxWrap = curObj.boxWrap
+    boxWrap.setFromObject(curObj);
+    boxHelper.update();
+}
+function addMeshWrap (mesh, color) {
+    // 创建他的包围盒的辅助线
+    var boxHelper = new THREE.BoxHelper(mesh, color );
+    // 创建包围盒
+    let boxWrap = new THREE.Box3().setFromObject( mesh );
+    boxHelper.userData = mesh.userData
+    boxWrap.userData = mesh.userData
+    // boxHelpers.push(boxHelper)
+    // boxWraps.push(boxWrap)
+    mesh.boxHelper = boxHelper
+    mesh.boxWrap = boxWrap
+    
+    scene.add(boxHelper);
+}
+
+// 删除Mesh
 function deleteObject () {
     const draggableObjects = dragControls.getObjects();
     if (draggableObjects.length > 0) {
         let obj = curObj;
         scene.remove(obj);
-        
+        gui.destroy()
         for(let i = objects.length - 1; i >= 0; i--) {
            let item = objects[i];
-           if (item.uuid == obj.userDate) {
+           if (item.uuid == obj.userData) {
                objects.splice(i, 1)
            }
         }
         for(let i = draggableObjects.length - 1; i >= 0 ; i--) {
            let item = draggableObjects[i];
-           if (item.uuid == obj.userDate) {
+           if (item.uuid == obj.userData) {
                 draggableObjects.splice(i, 1)
             }
         }
@@ -305,8 +358,9 @@ function deleteObject () {
 }
 // 添加mesh
 function addBox() {
+    let color = Math.random()*0xffffff;
     var geometry = new THREE.BoxGeometry( 2, 2, 2 );
-    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var material = new THREE.MeshBasicMaterial( {color} );
     var box = new THREE.Mesh( geometry, material );
     box.position.set(0,0,1)
     // 存储uuid
@@ -317,6 +371,9 @@ function addBox() {
     // add to draggable
     const draggableObjects = dragControls.getObjects();
     draggableObjects.push(box)
+
+    collidableMeshList.push(box)
+    addMeshWrap (box, color)
 }
 function addSphere() {
     var geometry = new THREE.SphereGeometry( 2, 30, 30 );
@@ -416,11 +473,6 @@ function addOperateEvents () {
         }
         console.log(event.target.files, '-----------打印event.target.files');
     })
-
-    orbitControls.addEventListener("change", function(){
-        collision(objects, curObj,camera, orbitControls );
-    }, false);
-
 }
 
 

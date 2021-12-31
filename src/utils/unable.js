@@ -81,3 +81,134 @@ document.getElementById('okBtn').addEventListener('click', function () {
 document.getElementById('clearBtn').addEventListener('click', function () {
     clearInput()
 })
+
+
+// 添加mesh
+function addBox() {
+    var geometry = new THREE.BoxGeometry( 2, 2, 2 );
+    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var box = new THREE.Mesh( geometry, material );
+    box.position.set(0,0,1)
+    // 存储uuid
+    box.userData = box.uuid
+
+    objects.push(box)
+    scene.add( box )
+    // add to draggable
+    const draggableObjects = dragControls.getObjects();
+    draggableObjects.push(box)
+
+    collidableMeshList.push(box)
+    addMeshWrap (box)
+}
+function addSphere() {
+    var geometry = new THREE.SphereGeometry( 2, 30, 30 );
+    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var sphere = new THREE.Mesh( geometry, material );
+    sphere.position.set(0,0,1)
+    sphere.userData = sphere.uuid
+
+    objects.push(sphere)
+    scene.add( sphere )
+    // add to draggable
+    const draggableObjects = dragControls.getObjects();
+    draggableObjects.push(sphere)
+    collidableMeshList.push(sphere)
+    addMeshWrap (sphere)
+}
+function addCylinder() {
+    var geometry = new THREE.CylinderGeometry( 2, 2, 2, 30);
+    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var cylinder = new THREE.Mesh( geometry, material );
+    cylinder.position.set(0,0,1)
+    cylinder.userData = cylinder.uuid
+
+    objects.push(cylinder)
+    scene.add( cylinder )
+    // add to draggable
+    const draggableObjects = dragControls.getObjects();
+    draggableObjects.push(cylinder)
+    collidableMeshList.push(cylinder)
+    addMeshWrap (cylinder)
+}
+function addCone() {
+    var geometry = new THREE.ConeGeometry( 2, 2, 30 );
+    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var cone = new THREE.Mesh( geometry, material );
+    cone.position.set(0,0,1)
+    cone.userData = cone.uuid
+
+    objects.push(cone)
+    scene.add( cone )
+    // add to draggable
+    const draggableObjects = dragControls.getObjects();
+    draggableObjects.push(cone)
+    collidableMeshList.push(cone)
+    addMeshWrap (cone)
+}
+function addTetrahedron() {
+    var geometry = new THREE.TetrahedronGeometry( 2 );
+    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var tetrahedron = new THREE.Mesh( geometry, material );
+    tetrahedron.position.set(0,0,1)
+    tetrahedron.userData = tetrahedron.uuid
+
+    objects.push(tetrahedron)
+    scene.add( tetrahedron )
+    // add to draggable
+    const draggableObjects = dragControls.getObjects();
+    draggableObjects.push(tetrahedron)
+    collidableMeshList.push(tetrahedron)
+    addMeshWrap (tetrahedron)
+}
+function addPlane() {
+    var geometry = new THREE.PlaneGeometry( 30, 30 );
+    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var plane = new THREE.Mesh( geometry, material );
+    plane.position.set(0,0,1)
+    plane.rotation.set(-0.5 * Math.PI, 0, 0)
+    plane.userData = plane.uuid
+
+    objects.push(plane)
+    scene.add( plane )
+    // add to draggable
+    const draggableObjects = dragControls.getObjects();
+    draggableObjects.push(plane)
+}
+function addObject (geoName) {
+    var geometry;
+    switch (geoName) {
+        case "Box":
+            geometry = new THREE.BoxGeometry( 2, 2, 2 );
+            break;  
+        case "Sphere":
+            geometry = new THREE.SphereGeometry( 2, 30, 30 );
+            break; 
+        case "Cylinder":
+            geometry = new THREE.CylinderGeometry( 2, 2, 2, 30);
+            break; 
+        case "Cone":
+            geometry = new THREE.ConeGeometry( 2, 2, 30 );
+            break; 
+        case "Tetrahedron":
+            geometry = new THREE.TetrahedronGeometry( 2 );
+            break; 
+        case "Plane":
+            geometry = new THREE.PlaneGeometry( 30, 30 );
+            break; 
+    }
+    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var meshObj = new THREE.Mesh( geometry, material );
+    meshObj.position.set(0,0,1)
+    if (geoName == 'Plane') {
+        meshObj.rotation.set(-0.5 * Math.PI, 0, 0);
+    }
+    // 存储uuid
+    meshObj.userData = meshObj.uuid
+
+    objects.push(meshObj)
+    scene.add( meshObj )
+    // add to draggable
+    const draggableObjects = dragControls.getObjects();
+    draggableObjects.push(meshObj)
+}
