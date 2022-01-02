@@ -5,7 +5,6 @@ var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 let operateType = "", operateGeo = "";
 let objects = [], curObj, curParameters, curGeoType
-let geoSetMoreWrapper = null, differInputDom = null
 let crash = false;
 let collidableMeshList = [];
 
@@ -137,14 +136,14 @@ function setDragControl() {
         transformControls.attach(event.object);
         // 设置三维坐标轴的大小，这个坐标轴不会随着模型的缩放而缩放
         transformControls.setSize(0.4);
-        // 碰撞检测
-        collisionRaycasterDetect()
         // 包围盒随着几何体移动
         updateMeshWrap();
-        // collisionWrapBox()
+        // 设置组件消失
+        delGUI()
+        // 碰撞检测
+        collisionRaycasterDetect()
     });
 }
-
 // 事件监听
 function addMouseEvents () {
     document.addEventListener('keydown', onKeyUp, false)
@@ -166,22 +165,11 @@ function onMouseDown(event){
      if(intersects.length>0){
         // 获取面上的对象
         curObj = intersects[0].object;
-
         console.log(curObj, '-----------打印curObj');
         // 每个GUI 都是重建的
-        if (gui != undefined) {
-            gui.destroy()
-            gui = undefined
-        }
         setCurObjGUI();
      } else {
-        if (gui != undefined) {
-            gui.destroy()
-            gui = undefined
-        }
-        if (geoSetMoreWrapper != null) {
-            geoSetMoreWrapper.style.display = 'none';
-        }
+        delGUI()
      }
 }
 function onKeyUp (event) {
@@ -204,6 +192,7 @@ function onKeyUp (event) {
 }
 // 更新几何体信息
 function setCurObjGUI () {
+    delGUI()
     gui = new dat.GUI();
     
     curParameters = {
@@ -282,31 +271,26 @@ function updateCube(){
     curObj.material.transparent = true;
 	curObj.visible = true;
 }
-
-// 包围盒碰撞监测
-// 通过包围盒监测  仅触发一次
-// 包围盒更加灵敏  两几何体相交时仍能判定
-function collisionWrapBox () {
-    if (curObj == undefined) return null;
-    let crashBox = curObj.boxWrap;
-    for (let i = 1; i < objects.length; i ++) {
-        let oneStone = objects[i];
-        if(oneStone.userData != curObj.userData) {
-            let stoneBox = oneStone.boxWrap;
-            let flag = crashBox.intersectsBox(stoneBox);
-            if(flag) {
-                appendText(" 撞上了2 "); // 撞到了
-            }
-        }
-
+function delGUI () {
+    if (gui != undefined) {
+        gui.destroy()
+        gui = undefined
     }
+}
+// 包围盒
+function updateMeshWrap () {
+    if (curObj.boxHelper == undefined) return;
+    let boxHelper = curObj.boxHelper
+    let boxWrap = curObj.boxWrap
+    boxWrap.setFromObject(curObj);
+    boxHelper.update();
 }
 // 屏幕射线碰撞检测
 // 射线检测  相交的部分越多 触发次数越多
 // 射线监测不够灵敏  几何体完全合并时不能判定
 function collisionRaycasterDetect () {
     if (curObj == undefined) return null;
-    let MovingCube = curObj;
+    let MovingCube = curObj.boxHelper;
     var originPoint = MovingCube.position.clone();
 	clearText();
     
@@ -325,23 +309,20 @@ function collisionRaycasterDetect () {
 		
 		var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
 		var collisionResults = ray.intersectObjects( collidableMeshList );
+        if (collisionResults.length == 1 && collisionResults[0].object.userData == MovingCube.userData){
+            clearText();
+            return;
+        }
 		if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() )  {
-			appendText(" 撞上了1 ");
+			appendText(" 撞上了！！！ ");
         }
 	}	
 	orbitControls.update();
 	stats.update();
 }
 function clearText(){   document.getElementById('message').innerHTML = '..........';   }
-function appendText(txt){   document.getElementById('message').innerHTML += txt;   }
-// 包围盒
-function updateMeshWrap () {
-    if (curObj.boxHelper == undefined) return;
-    let boxHelper = curObj.boxHelper
-    let boxWrap = curObj.boxWrap
-    boxWrap.setFromObject(curObj);
-    boxHelper.update();
-}
+function appendText(txt){   document.getElementById('message').innerHTML = txt;   }
+
 function addMeshWrap (mesh, color) {
     // 创建他的包围盒的辅助线
     var boxHelper = new THREE.BoxHelper(mesh, color );
@@ -351,30 +332,13 @@ function addMeshWrap (mesh, color) {
     boxWrap.userData = mesh.userData
     mesh.boxHelper = boxHelper
     mesh.boxWrap = boxWrap
-    
+    boxHelper.visible = false
+    // boxWrap.opacity = false
     scene.add(boxHelper);
-}
 
-// 删除Mesh
-function deleteObject () {
-    const draggableObjects = dragControls.getObjects();
-    if (draggableObjects.length > 0) {
-        let obj = curObj;
-        scene.remove(obj);
-        gui.destroy()
-        for(let i = objects.length - 1; i >= 0; i--) {
-           let item = objects[i];
-           if (item.uuid == obj.userData) {
-               objects.splice(i, 1)
-           }
-        }
-        for(let i = draggableObjects.length - 1; i >= 0 ; i--) {
-           let item = draggableObjects[i];
-           if (item.uuid == obj.userData) {
-                draggableObjects.splice(i, 1)
-            }
-        }
-    }
+    console.log(boxHelper, boxWrap, '-----------打印boxHelper, boxWrap');
+    
+    collidableMeshList.push(mesh)
 }
 // 添加mesh
 function addBox() {
@@ -393,7 +357,6 @@ function addBox() {
     draggableObjects.push(box)
 
     addMeshWrap (box, color)
-    collidableMeshList.push(box)
 }
 function addSphere() {
     let color = Math.random()*0xffffff;
@@ -476,7 +439,36 @@ function addPlane() {
 
     addMeshWrap (plane, color)
 }
-
+// 删除Mesh
+function deleteObject () {
+    delGUI();
+    const draggableObjects = dragControls.getObjects();
+    if (draggableObjects.length > 0) {
+        let obj = curObj;
+        scene.remove(obj.boxHelper);
+        scene.remove(obj);
+        
+        for(let i = objects.length - 1; i >= 0; i--) {
+           let item = objects[i];
+           if (item.uuid == obj.userData) {
+               objects.splice(i, 1)
+               collidableMeshList.splice(i, 1)
+           }
+        }
+        for(let i = collidableMeshList.length - 1; i >= 0; i--) {
+            let item = collidableMeshList[i];
+            if (item.uuid == obj.userData) {
+                collidableMeshList.splice(i, 1)
+            }
+         }
+        for(let i = draggableObjects.length - 1; i >= 0 ; i--) {
+           let item = draggableObjects[i];
+           if (item.uuid == obj.userData) {
+                draggableObjects.splice(i, 1)
+            }
+        }
+    }
+}
 function addOperateEvents () {
     document.getElementById('addPlane').addEventListener('click', function () {
         addPlane()
@@ -497,7 +489,7 @@ function addOperateEvents () {
         addTetrahedron()
     })
 
-    document.getElementById('modelFiles').addEventListener('change', function(event) {
+    /* document.getElementById('modelFiles').addEventListener('change', function(event) {
         let files = event.target.files;
         for(let i = 0; i < files.length; i++) {
            let file = files[i];
@@ -506,8 +498,8 @@ function addOperateEvents () {
            let fileType = file.name.substring(lastDotIndex+1)
            
         }
-        console.log(event.target.files, '-----------打印event.target.files');
-    })
+        console.log(files[0], '-----------打印files');
+    }) */
 }
 
 

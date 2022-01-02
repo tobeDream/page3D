@@ -212,3 +212,22 @@ function addObject (geoName) {
     const draggableObjects = dragControls.getObjects();
     draggableObjects.push(meshObj)
 }
+
+// 包围盒碰撞监测
+// 通过包围盒监测  仅触发一次
+// 包围盒更加灵敏  两几何体相交时仍能判定
+function collisionWrapBox () {
+    if (curObj == undefined) return null;
+    let crashBox = curObj.boxWrap;
+    for (let i = 1; i < objects.length; i ++) {
+        let oneStone = objects[i];
+        if(oneStone.userData != curObj.userData) {
+            let stoneBox = oneStone.boxWrap;
+            let flag = crashBox.intersectsBox(stoneBox);
+            if(flag) {
+                appendText(" 撞上了2 "); // 撞到了
+            }
+        }
+
+    }
+}
