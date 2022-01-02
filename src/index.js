@@ -7,7 +7,6 @@ let operateType = "", operateGeo = "";
 let objects = [], curObj, curParameters, curGeoType
 let geoSetMoreWrapper = null, differInputDom = null
 let crash = false;
-let boxHelpers = [], boxWraps = []
 let collidableMeshList = [];
 
 function init() {
@@ -25,18 +24,15 @@ function init() {
     // 轨道控制器 拖拽控制器
     initOrbitControl();
     initDragTransformControl();
+    // 灯光 坐标轴  帧状态
+    stats = initStats();
     initLight()
+    initAxes()
 
     addMouseEvents();
     addOperateEvents();
     
-    // 添加坐标系
-    var axes = new THREE.AxisHelper(1000);//参数设置了三条轴线的长度
-    scene.add(axes);
 
-    stats = initStats();
-    
-    
     render()
 }
 function onResize () {
@@ -63,6 +59,47 @@ function initStats () {
 
     document.getElementById('Stats-output').appendChild(stats.domElement);
     return stats;
+}
+//创建光源
+function initLight(){
+    // 方向光
+    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+    directionalLight.shadow.camera.near = 20; //产生阴影的最近距离
+    directionalLight.shadow.camera.far = 200; //产生阴影的最远距离
+    directionalLight.shadow.camera.left = -50; //产生阴影距离位置的最左边位置
+    directionalLight.shadow.camera.right = 50; //最右边
+    directionalLight.shadow.camera.top = 50; //最上边
+    directionalLight.shadow.camera.bottom = -50; //最下面
+    //这两个值决定使用多少像素生成阴影 默认512
+    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.shadow.mapSize.width = 1024;
+    scene.add( directionalLight );
+    // 环境光
+    scene.add( new THREE.AmbientLight( 0x505050 ) );
+   }
+// 创建坐标轴
+function initAxes() {
+    // 添加坐标系
+    var axes = new THREE.AxisHelper(1000);//参数设置了三条轴线的长度
+    scene.add(axes);
+
+    /* var axes = new THREE.AxisHelper(1000);
+	axes.position.set(0, 0, 0);
+	scene.add(axes);
+	
+	var gridXZ = new THREE.GridHelper(100, 10, 0x006600, 0x006600);
+	gridXZ.position.set( 0,0,0 );
+	scene.add(gridXZ);
+	
+	var gridXY = new THREE.GridHelper(100, 10, 0x000066, 0x000066);
+	gridXY.position.set( 0,0,0 );
+	gridXY.rotation.x = Math.PI/2;
+	scene.add(gridXY);
+
+	var gridYZ = new THREE.GridHelper(100, 10, 0x660000, 0x660000);
+	gridYZ.position.set( 0,0,0 );
+	gridYZ.rotation.z = Math.PI/2;
+	scene.add(gridYZ) */
 }
 function initOrbitControl() {
     orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -100,30 +137,14 @@ function setDragControl() {
         transformControls.attach(event.object);
         // 设置三维坐标轴的大小，这个坐标轴不会随着模型的缩放而缩放
         transformControls.setSize(0.4);
-        // 包围盒随着几何体移动
-        updateMeshWrap();
         // 碰撞检测
         collisionRaycasterDetect()
-        collisionWrapBox()
+        // 包围盒随着几何体移动
+        updateMeshWrap();
+        // collisionWrapBox()
     });
 }
-//创建光源
-function initLight(){
-    // 方向光
-    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
-    directionalLight.shadow.camera.near = 20; //产生阴影的最近距离
-    directionalLight.shadow.camera.far = 200; //产生阴影的最远距离
-    directionalLight.shadow.camera.left = -50; //产生阴影距离位置的最左边位置
-    directionalLight.shadow.camera.right = 50; //最右边
-    directionalLight.shadow.camera.top = 50; //最上边
-    directionalLight.shadow.camera.bottom = -50; //最下面
-    //这两个值决定使用多少像素生成阴影 默认512
-    directionalLight.shadow.mapSize.height = 1024;
-    directionalLight.shadow.mapSize.width = 1024;
-    scene.add( directionalLight );
-    // 环境光
-    scene.add( new THREE.AmbientLight( 0x505050 ) );
-   }
+
 // 事件监听
 function addMouseEvents () {
     document.addEventListener('keydown', onKeyUp, false)
@@ -281,8 +302,8 @@ function collisionWrapBox () {
     }
 }
 // 屏幕射线碰撞检测
-// 射线检测  每移动一次就触发一次
-// 射线监测不够灵敏  几何体相交时不能判定
+// 射线检测  相交的部分越多 触发次数越多
+// 射线监测不够灵敏  几何体完全合并时不能判定
 function collisionRaycasterDetect () {
     if (curObj == undefined) return null;
     let MovingCube = curObj;
@@ -305,7 +326,7 @@ function collisionRaycasterDetect () {
 		var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
 		var collisionResults = ray.intersectObjects( collidableMeshList );
 		if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() )  {
-			// appendText(" 撞上了1 ");
+			appendText(" 撞上了1 ");
         }
 	}	
 	orbitControls.update();
@@ -315,6 +336,7 @@ function clearText(){   document.getElementById('message').innerHTML = '........
 function appendText(txt){   document.getElementById('message').innerHTML += txt;   }
 // 包围盒
 function updateMeshWrap () {
+    if (curObj.boxHelper == undefined) return;
     let boxHelper = curObj.boxHelper
     let boxWrap = curObj.boxWrap
     boxWrap.setFromObject(curObj);
@@ -327,8 +349,6 @@ function addMeshWrap (mesh, color) {
     let boxWrap = new THREE.Box3().setFromObject( mesh );
     boxHelper.userData = mesh.userData
     boxWrap.userData = mesh.userData
-    // boxHelpers.push(boxHelper)
-    // boxWraps.push(boxWrap)
     mesh.boxHelper = boxHelper
     mesh.boxWrap = boxWrap
     
@@ -372,12 +392,13 @@ function addBox() {
     const draggableObjects = dragControls.getObjects();
     draggableObjects.push(box)
 
-    collidableMeshList.push(box)
     addMeshWrap (box, color)
+    collidableMeshList.push(box)
 }
 function addSphere() {
+    let color = Math.random()*0xffffff;
     var geometry = new THREE.SphereGeometry( 2, 30, 30 );
-    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var material = new THREE.MeshBasicMaterial( {color: color} );
     var sphere = new THREE.Mesh( geometry, material );
     sphere.position.set(0,0,1)
     sphere.userData = sphere.uuid
@@ -387,10 +408,13 @@ function addSphere() {
     // add to draggable
     const draggableObjects = dragControls.getObjects();
     draggableObjects.push(sphere)
+
+    addMeshWrap (sphere, color)
 }
 function addCylinder() {
+    let color = Math.random()*0xffffff;
     var geometry = new THREE.CylinderGeometry( 2, 2, 2, 30);
-    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var material = new THREE.MeshBasicMaterial( {color} );
     var cylinder = new THREE.Mesh( geometry, material );
     cylinder.position.set(0,0,1)
     cylinder.userData = cylinder.uuid
@@ -400,10 +424,13 @@ function addCylinder() {
     // add to draggable
     const draggableObjects = dragControls.getObjects();
     draggableObjects.push(cylinder)
+
+    addMeshWrap (cylinder, color)
 }
 function addCone() {
+    let color = Math.random()*0xffffff;
     var geometry = new THREE.ConeGeometry( 2, 2, 30 );
-    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var material = new THREE.MeshBasicMaterial( {color} );
     var cone = new THREE.Mesh( geometry, material );
     cone.position.set(0,0,1)
     cone.userData = cone.uuid
@@ -413,10 +440,13 @@ function addCone() {
     // add to draggable
     const draggableObjects = dragControls.getObjects();
     draggableObjects.push(cone)
+
+    addMeshWrap (cone, color)
 }
 function addTetrahedron() {
+    let color = Math.random()*0xffffff;
     var geometry = new THREE.TetrahedronGeometry( 2 );
-    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var material = new THREE.MeshBasicMaterial( {color} );
     var tetrahedron = new THREE.Mesh( geometry, material );
     tetrahedron.position.set(0,0,1)
     tetrahedron.userData = tetrahedron.uuid
@@ -426,10 +456,13 @@ function addTetrahedron() {
     // add to draggable
     const draggableObjects = dragControls.getObjects();
     draggableObjects.push(tetrahedron)
+
+    addMeshWrap (tetrahedron, color)
 }
 function addPlane() {
+    let color = Math.random()*0xffffff;
     var geometry = new THREE.PlaneGeometry( 30, 30 );
-    var material = new THREE.MeshBasicMaterial( {color: Math.random()*0xffffff} );
+    var material = new THREE.MeshBasicMaterial( {color} );
     var plane = new THREE.Mesh( geometry, material );
     plane.position.set(0,0,1)
     plane.rotation.set(-0.5 * Math.PI, 0, 0)
@@ -440,6 +473,8 @@ function addPlane() {
     // add to draggable
     const draggableObjects = dragControls.getObjects();
     draggableObjects.push(plane)
+
+    addMeshWrap (plane, color)
 }
 
 function addOperateEvents () {
