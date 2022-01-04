@@ -1,11 +1,9 @@
-let stats, scene, camera, renderer
-let gui, orbitControls, dragControls, transformControls
+let stats, scene, camera, renderer;
+let gui, orbitControls, dragControls, transformControls;
 /**使用射线投影获得点击的形状，再对形状进行处理*/
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
-let operateType = "", operateGeo = "";
-let objects = [], curObj, curParameters, curGeoType
-let crash = false;
+let objects = [], curObj, curParameters;
 let collidableMeshList = [];
 
 function init() {
@@ -16,7 +14,6 @@ function init() {
     renderer.setClearColor(new THREE.Color(0xcccccc));
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById('WebGL-output').appendChild(renderer.domElement);
-
     camera.position.set(30, 30, 60);
     camera.lookAt(scene.position);
 
@@ -27,10 +24,9 @@ function init() {
     stats = initStats();
     initLight()
     initAxes()
-
+    // 事件监听
     addMouseEvents();
     addOperateEvents();
-    
 
     render()
 }
@@ -146,7 +142,7 @@ function setDragControl() {
 }
 // 事件监听
 function addMouseEvents () {
-    document.addEventListener('keydown', onKeyUp, false)
+    document.addEventListener('keydown', onKeyDown, false)
     renderer.domElement.addEventListener('mousedown', onMouseDown, false)
 }
 function onMouseDown(event){
@@ -172,12 +168,14 @@ function onMouseDown(event){
         delGUI()
      }
 }
-function onKeyUp (event) {
+function onKeyDown (event) {
     switch(event.keyCode) {
         case 46: // delete
             deleteObject();
             break;
         case 83: // S
+            orbitControls.enabled = false;
+            setSelectObjects()
             break;
         case 84: // T
             transformControls.setMode('translate')
@@ -211,9 +209,9 @@ function setCurObjGUI () {
 	};
     
     var folder1 = gui.addFolder('Position');
-	var positionX = folder1.add( curParameters, 'positionX' ).min(-200).max(200).step(1).listen();
-	var positionY = folder1.add( curParameters, 'positionY' ).min(-200).max(200).step(1).listen();
-	var positionZ = folder1.add( curParameters, 'positionZ' ).min(-200).max(200).step(1).listen();
+	var positionX = folder1.add( curParameters, 'positionX' ).min(-200).max(100).step(1).listen();
+	var positionY = folder1.add( curParameters, 'positionY' ).min(-200).max(100).step(1).listen();
+	var positionZ = folder1.add( curParameters, 'positionZ' ).min(-200).max(100).step(1).listen();
 	folder1.open();
 
     var folder2 = gui.addFolder('Rotation');
@@ -224,8 +222,8 @@ function setCurObjGUI () {
 
     var folder3 = gui.addFolder('Scale');
 	var scaleX = folder3.add( curParameters, 'scaleX' ).name('scaleX');
-	var scaleY = folder3.add( curParameters, 'scaleY' ).name('scaleX');
-	var scaleZ = folder3.add( curParameters, 'scaleZ' ).name('scaleX');
+	var scaleY = folder3.add( curParameters, 'scaleY' ).name('scaleY');
+	var scaleZ = folder3.add( curParameters, 'scaleZ' ).name('scaleZ');
 	folder3.open();
 	
 	positionX.onChange(function(value) {   curObj.position.x = value;   });
@@ -321,7 +319,7 @@ function collisionRaycasterDetect () {
 	stats.update();
 }
 function clearText(){   document.getElementById('message').innerHTML = '..........';   }
-function appendText(txt){   document.getElementById('message').innerHTML = txt;   }
+function appendText(txt){   document.getElementById('message').innerHTML += txt;   }
 
 function addMeshWrap (mesh, color) {
     // 创建他的包围盒的辅助线
