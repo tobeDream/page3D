@@ -6,10 +6,8 @@ var mouse = new THREE.Vector2();
 let objects = [], curObj, curParameters;
 let collidableMeshList = [];
 
-const ACTION_SELECT = 1, ACTION_NONE = 0;
-let curveHandles = [];
-let action = ACTION_NONE, flow, line;
-let passingPoints = [];
+let curveHandles = [], passingPoints = [];
+let flow, line, showMoveCurve = false;
 
 function init() {
     scene = new THREE.Scene();
@@ -36,13 +34,18 @@ function init() {
     render()
 }
 function delCurveObj () {
-    console.log(line, '-----------打印line');
     if (line == undefined) return;
     scene.remove(line);
     scene.remove(flow.object3D);
     line = undefined;
     flow = undefined;
     render()
+}
+function curveHide (flag) {
+    showMoveCurve = flag;
+    if (line == undefined) return;
+    line.visible = showMoveCurve;
+    flow.object3D.visible = showMoveCurve;
 }
 function pathAddPoint (object, moveFlag, updateFlag) {
     if (object == undefined) return;
@@ -57,13 +60,10 @@ function pathAddPoint (object, moveFlag, updateFlag) {
             break;
         }
     }
-    if (updateFlag) {
-        setTimeout(() => {
-            createCurveMove ()
-        }, 500)
-    } else {
-        passingPoints.push(object);
-    }
+    if (!updateFlag) passingPoints.push(object);
+    setTimeout(() => {
+        createCurveMove ()
+    }, 500)
 }
 function createCurveMove () {
     delCurveObj();
@@ -78,14 +78,6 @@ function createCurveMove () {
     if (initialPoints.length < 2) return;
 
     curveHandles = [...passingPoints];
-    // const boxGeometry = new THREE.BoxGeometry( 2, 2, 2 );
-    // const boxMaterial = new THREE.MeshBasicMaterial();
-    // for ( const handlePos of initialPoints ) {
-    //     handle = new THREE.Mesh( boxGeometry, boxMaterial );
-    //     handle.position.copy( handlePos );
-    //     curveHandles.push( handle );
-    //     scene.add( handle );
-    // }
     const curve = new THREE.CatmullRomCurve3(
         curveHandles.map( ( handle ) => handle.position )
     );
@@ -96,12 +88,14 @@ function createCurveMove () {
         new THREE.BufferGeometry().setFromPoints( points ),
         new THREE.LineBasicMaterial( { color: 0x00ff00 } )
     );
+    line.visible = showMoveCurve;
     scene.add( line );
     const geometry = new THREE.SphereGeometry( 1, 30, 30 );
     const material = new THREE.MeshBasicMaterial( {color: 0x99ffff} );
     const objectToCurve = new THREE.Mesh( geometry, material );
     flow = new Flow( objectToCurve );
     flow.updateCurve( 0, curve );
+    flow.object3D.visible = showMoveCurve;
     scene.add( flow.object3D );
 }
 function aniCurve () {
@@ -257,11 +251,11 @@ function onKeyDown (event) {
         case 83: // S
             pathAddPoint(curObj, false, false)
             break;
-        case 84: // T
-            createCurveMove()
+        case 86: // V
+            curveHide(true)
             break;
-        case 82: // R
-            transformControls.setMode('rotate')
+        case 72: // H
+            curveHide(false)
             break;
     }
 }

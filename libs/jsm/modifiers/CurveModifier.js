@@ -231,7 +231,9 @@ class Flow {
 	moveAlongCurve( amount ) {
 
 		this.uniforms.pathOffset.value += amount;
-
+		if (this.uniforms.pathOffset.value > 3) {
+			this.uniforms.pathOffset.value = 3
+		}
 	}
 
 }
