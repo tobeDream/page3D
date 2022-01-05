@@ -3,37 +3,25 @@ const BITS = 3;
 const TEXTURE_WIDTH = 1024;
 const TEXTURE_HEIGHT = 4;
 
-import {
-	DataTexture,
-	RGBFormat,
-	FloatType,
-	RepeatWrapping,
-	Mesh,
-	InstancedMesh,
-	NearestFilter,
-	DynamicDrawUsage,
-	Matrix4
-} from '../../../build/three.module.js';
-
 /**
- * Make a new DataTexture to store the descriptions of the curves.
+ * Make a new THREE.DataTexture to store the descriptions of the curves.
  *
  * @param { number } numberOfCurves the number of curves needed to be described by this texture.
  */
-export function initSplineTexture( numberOfCurves = 1 ) {
+function initSplineTexture( numberOfCurves = 1 ) {
 
 	const dataArray = new Float32Array( TEXTURE_WIDTH * TEXTURE_HEIGHT * numberOfCurves * BITS );
-	const dataTexture = new DataTexture(
+	const dataTexture = new THREE.DataTexture(
 		dataArray,
 		TEXTURE_WIDTH,
 		TEXTURE_HEIGHT * numberOfCurves,
-		RGBFormat,
-		FloatType
+		THREE.RGBFormat,
+		THREE.FloatType
 	);
 
-	dataTexture.wrapS = RepeatWrapping;
-	dataTexture.wrapY = RepeatWrapping;
-	dataTexture.magFilter = NearestFilter;
+	dataTexture.wrapS = THREE.RepeatWrapping;
+	dataTexture.wrapY = THREE.RepeatWrapping;
+	dataTexture.magFilter = THREE.NearestFilter;
 	dataTexture.needsUpdate = true;
 
 	return dataTexture;
@@ -43,11 +31,11 @@ export function initSplineTexture( numberOfCurves = 1 ) {
 /**
  * Write the curve description to the data texture
  *
- * @param { DataTexture } texture The DataTexture to write to
+ * @param { THREE.DataTexture } texture The THREE.DataTexture to write to
  * @param { Curve } splineCurve The curve to describe
  * @param { number } offset Which curve slot to write to
  */
-export function updateSplineTexture( texture, splineCurve, offset = 0 ) {
+function updateSplineTexture( texture, splineCurve, offset = 0 ) {
 
 	const numberOfPoints = Math.floor( TEXTURE_WIDTH * ( TEXTURE_HEIGHT / 4 ) );
 	splineCurve.arcLengthDivisions = numberOfPoints / 2;
@@ -90,9 +78,9 @@ function setTextureValue( texture, index, x, y, z, o ) {
 /**
  * Create a new set of uniforms for describing the curve modifier
  *
- * @param { DataTexture } Texture which holds the curve description
+ * @param { THREE.DataTexture } Texture which holds the curve description
  */
-export function getUniforms( splineTexture ) {
+function getUniforms( splineTexture ) {
 
 	const uniforms = {
 		spineTexture: { value: splineTexture },
@@ -106,7 +94,7 @@ export function getUniforms( splineTexture ) {
 
 }
 
-export function modifyShader( material, uniforms, numberOfCurves = 1 ) {
+function modifyShader( material, uniforms, numberOfCurves = 1 ) {
 
 	if ( material.__ok ) return;
 	material.__ok = true;
@@ -195,10 +183,10 @@ vec3 transformedNormal = normalMatrix * (basis * objectNormal);
 /**
  * A helper class for making meshes bend aroudn curves
  */
-export class Flow {
+class Flow {
 
 	/**
-	 * @param {Mesh} mesh The mesh to clone and modify to bend around the curve
+	 * @param {THREE.Mesh} mesh The mesh to clone and modify to bend around the curve
 	 * @param {number} numberOfCurves The amount of space that should preallocated for additional curves
 	 */
 	constructor( mesh, numberOfCurves = 1 ) {
@@ -209,8 +197,8 @@ export class Flow {
 		obj3D.traverse( function ( child ) {
 
 			if (
-				child instanceof Mesh ||
-				child instanceof InstancedMesh
+				child instanceof THREE.Mesh ||
+				child instanceof THREE.InstancedMesh
 			) {
 
 				child.material = child.material.clone();
@@ -247,12 +235,12 @@ export class Flow {
 	}
 
 }
-const matrix = new Matrix4();
+const matrix = new THREE.Matrix4();
 
 /**
  * A helper class for creating instanced versions of flow, where the instances are placed on the curve.
  */
-export class InstancedFlow extends Flow {
+class InstancedFlow extends Flow {
 
 	/**
 	 *
@@ -263,12 +251,12 @@ export class InstancedFlow extends Flow {
 	 */
 	constructor( count, curveCount, geometry, material ) {
 
-		const mesh = new InstancedMesh(
+		const mesh = new THREE.InstancedMesh(
 			geometry,
 			material,
 			count
 		);
-		mesh.instanceMatrix.setUsage( DynamicDrawUsage );
+		mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage );
 		super( mesh, curveCount );
 
 		this.offsets = new Array( count ).fill( 0 );

@@ -6,6 +6,11 @@ var mouse = new THREE.Vector2();
 let objects = [], curObj, curParameters;
 let collidableMeshList = [];
 
+const ACTION_SELECT = 1, ACTION_NONE = 0;
+let curveHandles = [];
+let action = ACTION_NONE, flow, line;
+let passingPoints = [];
+
 function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -30,6 +35,80 @@ function init() {
 
     render()
 }
+function delCurveObj () {
+    console.log(line, '-----------打印line');
+    if (line == undefined) return;
+    scene.remove(line);
+    scene.remove(flow.object3D);
+    line = undefined;
+    flow = undefined;
+    render()
+}
+function pathAddPoint (object, moveFlag, updateFlag) {
+    if (object == undefined) return;
+    for(let i = 0; i < passingPoints.length; i++) {
+        let obj = passingPoints[i]
+        if (obj.userData == object.userData) {
+            if (moveFlag) {
+                passingPoints.splice(i, 1, object);
+            } else {
+                passingPoints.splice(i, 1);
+            }
+            break;
+        }
+    }
+    if (updateFlag) {
+        setTimeout(() => {
+            createCurveMove ()
+        }, 500)
+    } else {
+        passingPoints.push(object);
+    }
+}
+function createCurveMove () {
+    delCurveObj();
+    let initialPoints = [];
+    for(let i = 0; i < passingPoints.length; i++) {
+        let obj = {}
+        obj.x = passingPoints[i].position.x
+        obj.y = passingPoints[i].position.y
+        obj.z = passingPoints[i].position.z
+        initialPoints.push(obj);
+    }
+    if (initialPoints.length < 2) return;
+
+    curveHandles = [...passingPoints];
+    // const boxGeometry = new THREE.BoxGeometry( 2, 2, 2 );
+    // const boxMaterial = new THREE.MeshBasicMaterial();
+    // for ( const handlePos of initialPoints ) {
+    //     handle = new THREE.Mesh( boxGeometry, boxMaterial );
+    //     handle.position.copy( handlePos );
+    //     curveHandles.push( handle );
+    //     scene.add( handle );
+    // }
+    const curve = new THREE.CatmullRomCurve3(
+        curveHandles.map( ( handle ) => handle.position )
+    );
+    curve.curveType = 'centripetal';
+    curve.closed = true;
+    const points = curve.getPoints( 50 );
+    line = new THREE.LineLoop(
+        new THREE.BufferGeometry().setFromPoints( points ),
+        new THREE.LineBasicMaterial( { color: 0x00ff00 } )
+    );
+    scene.add( line );
+    const geometry = new THREE.SphereGeometry( 1, 30, 30 );
+    const material = new THREE.MeshBasicMaterial( {color: 0x99ffff} );
+    const objectToCurve = new THREE.Mesh( geometry, material );
+    flow = new Flow( objectToCurve );
+    flow.updateCurve( 0, curve );
+    scene.add( flow.object3D );
+}
+function aniCurve () {
+    if ( flow ) {
+        flow.moveAlongCurve( 0.001 );
+    }
+}
 function onResize () {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -38,7 +117,7 @@ function onResize () {
 function render () {
     stats.update();
     orbitControls.update();
-
+    aniCurve()
     requestAnimationFrame(render);
     renderer.render(scene, camera);
 }
@@ -164,6 +243,8 @@ function onMouseDown(event){
         console.log(curObj, '-----------打印curObj');
         // 每个GUI 都是重建的
         setCurObjGUI();
+        // 运动轨迹变化
+        pathAddPoint(curObj, true, true);
      } else {
         delGUI()
      }
@@ -174,17 +255,13 @@ function onKeyDown (event) {
             deleteObject();
             break;
         case 83: // S
-            orbitControls.enabled = false;
-            setSelectObjects()
+            pathAddPoint(curObj, false, false)
             break;
         case 84: // T
-            transformControls.setMode('translate')
+            createCurveMove()
             break;
         case 82: // R
             transformControls.setMode('rotate')
-            break;
-        case 83: // S
-            transformControls.setMode('scale')
             break;
     }
 }
@@ -334,8 +411,6 @@ function addMeshWrap (mesh, color) {
     // boxWrap.opacity = false
     scene.add(boxHelper);
 
-    console.log(boxHelper, boxWrap, '-----------打印boxHelper, boxWrap');
-    
     collidableMeshList.push(mesh)
 }
 // 添加mesh
@@ -445,6 +520,7 @@ function deleteObject () {
         let obj = curObj;
         scene.remove(obj.boxHelper);
         scene.remove(obj);
+        pathAddPoint (obj, false, true)
         
         for(let i = objects.length - 1; i >= 0; i--) {
            let item = objects[i];
